@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Remove Comments",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "remove_comments.py",
+                "board.lua",
+                "board_out.lua",
+                "end.lua",
+                "end_out.lua",
+                "game.lua",
+                "game_out.lua",
+                "main.lua",
+                "main_out.lua",
+                "character.lua",
+                "character_out.lua",
+                "pq.lua",
+                "pq_out.lua",
+                "spinner.lua",
+                "spinner_out.lua",
+                "title.lua",
+                "title_out.lua",
+                "ui.lua",
+                "ui_out.lua",
+                "utils.lua",
+                "utils_out.lua",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
