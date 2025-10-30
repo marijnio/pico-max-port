@@ -1,14 +1,13 @@
 
 
-function init_character()
-    
-    animals = {
-        {name="Bunny", pos=3, color=8},
-        {name="Fox", pos=3, color=9},
-    }
-    
-    
-    max = {pos=1, color=12}
+function make_char(name, start_pos, is_critter)
+  return {
+    name = name,
+    pos = start_pos,       
+    start_pos = start_pos, 
+    caught = false,
+    is_critter = is_critter
+  }
 end
 
 

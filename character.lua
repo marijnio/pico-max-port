@@ -1,14 +1,13 @@
 -- player.lua
 
-function init_character()
-    -- example animal and Max setup
-    animals = {
-        {name="Bunny", pos=3, color=8},
-        {name="Fox", pos=3, color=9},
-    }
-    
-    -- Max character
-    max = {pos=1, color=12}
+function make_char(name, start_pos, is_critter)
+  return {
+    name = name,
+    pos = start_pos,       -- current board index
+    start_pos = start_pos, -- for resets
+    caught = false,
+    is_critter = is_critter
+  }
 end
 
 -- move a character forward n steps

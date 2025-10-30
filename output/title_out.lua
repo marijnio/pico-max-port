@@ -1,6 +1,6 @@
 function update_title()
     if btnp(4) then  
-        game_state = STATE_GAME
+        state = STATE_GAME
     end
 end
 
