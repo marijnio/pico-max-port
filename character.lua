@@ -6,7 +6,8 @@ function make_char(name, start_pos, is_critter)
     pos = start_pos,       -- current board index
     start_pos = start_pos, -- for resets
     caught = false,
-    is_critter = is_critter
+    is_critter = is_critter,
+    can_move = false
   }
 end
 

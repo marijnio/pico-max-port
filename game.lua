@@ -9,13 +9,10 @@ TURN_END = 5
 game = {
     state = STATE_TITLE,
     turn_state = TURN_TREAT_CHOICE,
-    treats_left = 4,
     dice = {
         {result=nil}, -- die 1
         {result=nil}  -- die 2
     },
-    green_moves = 0,
-    black_moves = 0,
     active_char = nil,
     chars = {}
 }
@@ -27,13 +24,13 @@ debug = nil
 function init_game()
   player_turn = 1
   max_position = 0
-  add(game.chars, make_char("max", 0, false))
-  add(game.chars, make_char("mouse", 3, true))
-  add(game.chars, make_char("bird", 4, true))
-  add(game.chars, make_char("squirrel", 5, true))
+  add(game.chars, make_char("max", 1, false))
+  add(game.chars, make_char("mouse", 4, true))
+  -- add(game.chars, make_char("bird", 4, true))
+  -- add(game.chars, make_char("squirrel", 5, true))
   init_board()
-
-  game.selected_index = 1
+  printh("game initialized")
+  -- game.selected_index = 1
 end
 
 -- update_game: handle turn-based movement
@@ -55,17 +52,25 @@ end
 
 
 function update_treat_choice()
-  if btnp(4) and game.treats_left > 0 then -- ❎ to use treat
-    use_treat()
-    game.turn_state = TURN_ROLL_DICE
-  elseif btnp(5) then -- 🅾️ skip
-    game.turn_state = TURN_ROLL_DICE
-  end
+  -- if btnp(4) and game.treats_left > 0 then -- ❎ to use treat
+  --   use_treat()
+  --   game.turn_state = TURN_ROLL_DICE
+  -- elseif btnp(5) then -- 🅾️ skip
+  --   game.turn_state = TURN_ROLL_DICE
+  -- end
+
+  game.turn_state = TURN_ROLL_DICE
+
 end
 
 function update_roll_dice()
   if btnp(4) then
     roll_dice()
+
+    for d in all(game.dice) do
+      printh(d.result)
+    end
+    
     game.turn_state = TURN_SELECT_CHAR
   end
 end
@@ -73,25 +78,29 @@ end
 function roll_dice()
   for d in all(game.dice) do
     d.result = DICE_SIDES[flr(rnd(2)) + 1]
+    printh(DICE_SIDES[1])
+    -- printh(d.result)
   end
 
-  -- after rolling, tally up the results
-  game.black_moves = 0
-  game.green_moves = 0
-
-  for d in all(game.dice) do
-    if d.result == "black" then
-      game.black_moves += 1
-    else
-      game.green_moves += 1
-    end
-  end
+  -- for d in all(game.dice) do
+  --   if d.result == "black" then
+  --     game.black_moves += 1
+  --   else
+  --     game.green_moves += 1
+  --   end
+  -- end
 
   -- total moves this turn
-  game.moves_left = game.black_moves + game.green_moves
+  -- game.moves_left = game.black_moves + game.green_moves
 end
 
 function update_select_char()
+
+  -- for each character, check if it can move and mark it as selectable
+  for c in all(game.chars) do
+    c.can_move = can_char_move(c)
+  end
+
   -- move selection cursor left/right
   if btnp(0) then next_valid_char(-1) end  -- ⬅️
   if btnp(1) then next_valid_char(1) end   -- ➡️
@@ -208,10 +217,20 @@ function next_valid_char(dir)
 end
 
 function can_char_move(c)
+  -- character can't move if already caught
   if c.caught then return false end
-  if c.is_critter and game.green_moves <= 0 then return false end
-  if not c.is_critter and game.black_moves <= 0 then return false end
+  -- character can't move if no moves left for their type
+  if c.is_critter and dice_left("green") <= 0 then return false end
+  if not c.is_critter and dice_left("black") <= 0 then return false end
   return true
+end
+
+function dice_left(color)
+  local count = 0
+  for d in all(game.dice) do
+    if d.result == color or color == "" then count += 1 end
+  end
+  return count
 end
 
 -- draw_game: draw the board and pieces
@@ -222,21 +241,25 @@ function draw_game()
       rectfill(board[i].x, board[i].y, board[i].x+7, board[i].y+7, 5)
   end
 
-    -- draw characters
+  -- draw characters on board
+  -- for every character with a position
   for i, c in ipairs(game.chars) do
-    if c.pos ~= nil and c.pos >= 1 and c.pos <= #board and board[c.pos] then
+    if c.pos ~= nil and board[c.pos] then
+      -- get the cell for the character's position
       local cell = board[c.pos]
-      local col = c.is_critter and 11 or 8
+      
+      -- if this character is currently selectable, use a different color
+      local col = c.can_move and 11 or 8
+
+      -- draw the character as a filled rectangle, for now
       rectfill(cell.x+1, cell.y+1, cell.x+6, cell.y+6, col)
-      if i == game.selected_index then
-        rect(cell.x, cell.y, cell.x+7, cell.y+7, 7)
-      end
+      
     end
   end
   
   -- display dice results
   if game.dice then
-      local dice_text = "Dice: "
+      local dice_text = "dice: "
       for i, d in ipairs(game.dice) do
           dice_text = dice_text .. (d.result or "?")
           if i < #game.dice then dice_text = dice_text .. ", " end
@@ -244,19 +267,15 @@ function draw_game()
       print(dice_text, 2, 2, 7)
   end
 
-  -- display treats left
-  print("Treats left: "..game.treats_left, 2, 10, 7)
-
   -- display current turn state
   local turn_states = {
-      [TURN_TREAT_CHOICE] = "Treat Choice",
-      [TURN_ROLL_DICE] = "Roll Dice",
-      [TURN_SELECT_CHAR] = "Select Character",
-      [TURN_MOVE_CHAR] = "Move Character",
-      [TURN_CHECK_CAUGHT] = "Check Caught",
-      [TURN_END] = "Turn End"
+      [TURN_TREAT_CHOICE] = "treat choice",
+      [TURN_ROLL_DICE] = "roll dice",
+      [TURN_SELECT_CHAR] = "select character",
+      [TURN_MOVE_CHAR] = "move character",
+      [TURN_CHECK_CAUGHT] = "check caught",
+      [TURN_END] = "turn end"
   }
-  print("Turn State: "..(turn_states[game.turn_state] or "Unknown"), 2, 18, 7)
+  print("turn state: "..(turn_states[game.turn_state] or "unknown"), 2, 18, 7)
 
-  -- print(debug, 2, 120, 6)
 end

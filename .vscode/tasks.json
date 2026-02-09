@@ -19,8 +19,6 @@
                 "character_out.lua",
                 "pq.lua",
                 "pq_out.lua",
-                "spinner.lua",
-                "spinner_out.lua",
                 "title.lua",
                 "title_out.lua",
                 "ui.lua",

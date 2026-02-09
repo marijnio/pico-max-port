@@ -7,7 +7,6 @@ __lua__
 #include ./output/main_out.lua
 #include ./output/character_out.lua
 #include ./output/pq_out.lua
-#include ./output/spinner_out.lua
 #include ./output/title_out.lua
 #include ./output/ui_out.lua
 #include ./output/utils_out.lua
