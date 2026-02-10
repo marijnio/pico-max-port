@@ -12,9 +12,7 @@ function make_char(name, start_pos, is_critter)
 end
 
 -- move a character forward n steps
-function move_character(character, steps)
-    character.pos = character.pos + steps
-    if character.pos > BOARD_SIZE then
-        character.pos = BOARD_SIZE
-    end
+function update_move_char()
+  move_character(game.selected_index, steps_to_move)
+  game.turn_state = TURN_CHECK_CAPTURE
 end

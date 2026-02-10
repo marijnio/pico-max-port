@@ -3,9 +3,10 @@ TURN_START = 0
 TURN_TREAT_CHOICE = 1
 TURN_ROLL_DICE = 2
 TURN_SELECT_CHAR = 3
-TURN_MOVE_CHAR = 4
-TURN_CHECK_CAUGHT = 5
-TURN_END = 6
+TURN_CHOOSE_STEPS = 4
+TURN_MOVE_CHAR = 5
+TURN_CHECK_CAPTURE = 6
+TURN_END = 7
 
 game = {
     state = STATE_TITLE,
@@ -14,9 +15,9 @@ game = {
         {result=nil}, 
         {result=nil}  
     },
-    active_char = nil,
     chars = {},
-    selected_index = 1
+    selected_index = 1,
+    steps_to_move = 0,
 }
 
 DICE_SIDES = {"black", "green"}
@@ -45,10 +46,12 @@ function update_game()
     update_roll_dice()
   elseif game.turn_state == TURN_SELECT_CHAR then
     update_select_char()
+  elseif game.turn_state == TURN_CHOOSE_STEPS then
+    update_choose_steps()
   elseif game.turn_state == TURN_MOVE_CHAR then
     update_move_char()
-  elseif game.turn_state == TURN_CHECK_CAUGHT then
-    update_check_caught()
+  elseif game.turn_state == TURN_CHECK_CAPTURE then
+    update_check_capture()
   elseif game.turn_state == TURN_END then
     update_turn_end()
   end
@@ -75,10 +78,6 @@ function update_roll_dice()
   if btnp(4) then
     roll_dice()
 
-    for d in all(game.dice) do
-      printh(d.result)
-    end
-    
     game.turn_state = TURN_SELECT_CHAR
   end
 end
@@ -86,8 +85,6 @@ end
 function roll_dice()
   for d in all(game.dice) do
     d.result = DICE_SIDES[flr(rnd(2)) + 1]
-    printh(DICE_SIDES[1])
-    
   end
 end
 
@@ -106,34 +103,23 @@ function update_select_char()
 
   
   if btnp(4) and can_char_move(selected) then 
-    game.active_char = selected.name
-    game.turn_state = TURN_MOVE_CHAR
+    game.turn_state = TURN_CHOOSE_STEPS
   end
 end
 
-function update_move_char()
-  move_character(game.active_char)
-
+function update_choose_steps()
   
-  local c = get_char(game.active_char)
-  if c.is_critter then
-    game.green_moves -= 1
-  else
-    game.black_moves -= 1
-  end
-
-  
-  game.moves_left = game.black_moves + game.green_moves
-
-  
-  if game.moves_left <= 0 then
-    game.turn_state = TURN_CHECK_CAUGHT
-  else
-    game.turn_state = TURN_SELECT_CHAR
-  end
+  steps_to_move = 1 
+  game.turn_state = TURN_MOVE_CHAR
 end
 
-function update_check_caught()
+function move_character(index, steps)
+  local c = game.chars[index]
+  printh("moving "..c.name.." by "..steps.." steps")
+  c.pos += steps
+end
+
+function update_check_capture()
   if any_critter_caught() then
     remove_caught_critters()
   end
@@ -141,26 +127,18 @@ function update_check_caught()
   game.turn_state = TURN_END
 end
 
-function update_turn_end()
-  
-  next_player_turn()
-  game.turn_state = TURN_TREAT_CHOICE
-end
-
-function next_player_turn()
+function update_turn_end()  
   
   for d in all(game.dice) do
     d.result = nil
   end
-  game.black_moves = 0
-  game.green_moves = 0
-  game.moves_left = 0
-  game.active_char = nil
-  game.selected_index = 1
+  game.selected_index = nil
+
+  game.turn_state = TURN_TREAT_CHOICE
 end
 
 function use_treat()
-  game.treats_left -= 1
+
   reset_max_position()
 end
 
@@ -173,16 +151,6 @@ end
 function reset_max_position()
   local max = get_char("max")
   max.x, max.y = max.start_x, max.start_y
-end
-
-function move_character(name)
-  local c = get_char(name)
-  if c.caught then return end
-
-  c.pos += 1 
-  if c.pos > BOARD_SIZE then
-    c.pos = BOARD_SIZE 
-  end
 end
 
 function any_critter_caught()
@@ -256,7 +224,7 @@ function draw_game()
 
   
   local selected = game.chars[game.selected_index]
-  if selected.pos ~= nil and board[selected.pos] then
+  if selected ~= nil then
     local cell = board[selected.pos]
     rect(cell.x, cell.y, cell.x+7, cell.y+7, 7)
   end
@@ -273,11 +241,13 @@ function draw_game()
 
   
   local turn_states = {
+      [TURN_START] = "start",
       [TURN_TREAT_CHOICE] = "treat choice",
       [TURN_ROLL_DICE] = "roll dice",
       [TURN_SELECT_CHAR] = "select character",
+      [TURN_CHOOSE_STEPS] = "choose steps",
       [TURN_MOVE_CHAR] = "move character",
-      [TURN_CHECK_CAUGHT] = "check caught",
+      [TURN_CHECK_CAPTURE] = "check caught",
       [TURN_END] = "turn end"
   }
   print("turn state: "..(turn_states[game.turn_state] or "unknown"), 2, 18, 7)
