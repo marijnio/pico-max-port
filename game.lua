@@ -1,10 +1,11 @@
 -- turn sub-states
-TURN_TREAT_CHOICE = 0
-TURN_ROLL_DICE = 1
-TURN_SELECT_CHAR = 2
-TURN_MOVE_CHAR = 3
-TURN_CHECK_CAUGHT = 4
-TURN_END = 5
+TURN_START = 0
+TURN_TREAT_CHOICE = 1
+TURN_ROLL_DICE = 2
+TURN_SELECT_CHAR = 3
+TURN_MOVE_CHAR = 4
+TURN_CHECK_CAUGHT = 5
+TURN_END = 6
 
 game = {
     state = STATE_TITLE,
@@ -14,7 +15,8 @@ game = {
         {result=nil}  -- die 2
     },
     active_char = nil,
-    chars = {}
+    chars = {},
+    selected_index = 1
 }
 
 DICE_SIDES = {"black", "green"}
@@ -35,7 +37,9 @@ end
 
 -- update_game: handle turn-based movement
 function update_game()
-  if game.turn_state == TURN_TREAT_CHOICE then
+  if game.turn_state == TURN_START then
+    update_turn_start()
+  elseif game.turn_state == TURN_TREAT_CHOICE then
     update_treat_choice()
   elseif game.turn_state == TURN_ROLL_DICE then
     update_roll_dice()
@@ -48,6 +52,10 @@ function update_game()
   elseif game.turn_state == TURN_END then
     update_turn_end()
   end
+end
+
+function update_turn_start()  
+  game.turn_state = TURN_TREAT_CHOICE
 end
 
 
@@ -81,22 +89,11 @@ function roll_dice()
     printh(DICE_SIDES[1])
     -- printh(d.result)
   end
-
-  -- for d in all(game.dice) do
-  --   if d.result == "black" then
-  --     game.black_moves += 1
-  --   else
-  --     game.green_moves += 1
-  --   end
-  -- end
-
-  -- total moves this turn
-  -- game.moves_left = game.black_moves + game.green_moves
 end
 
 function update_select_char()
 
-  -- for each character, check if it can move and mark it as selectable
+  -- for each character, check if it can move and mark it as such
   for c in all(game.chars) do
     c.can_move = can_char_move(c)
   end
@@ -255,6 +252,13 @@ function draw_game()
       rectfill(cell.x+1, cell.y+1, cell.x+6, cell.y+6, col)
       
     end
+  end
+
+  -- Show selection cursor
+  local selected = game.chars[game.selected_index]
+  if selected.pos ~= nil and board[selected.pos] then
+    local cell = board[selected.pos]
+    rect(cell.x, cell.y, cell.x+7, cell.y+7, 7)
   end
   
   -- display dice results
