@@ -16,7 +16,7 @@ game = {
         {result=nil}  
     },
     chars = {},
-    selected_index = 1,
+    selected_index = nil,
     steps_to_move = 0,
 }
 
@@ -96,15 +96,56 @@ function update_select_char()
   end
 
   
+  local selected = get_selected_char()
+  if selected == nil or not can_char_move(selected) then
+    next_valid_char(1)
+    selected = get_selected_char()
+  end
+
+  
+  if selected == nil then
+    game.turn_state = TURN_END
+    return
+  end
+
+  
   if btnp(0) then next_valid_char(-1) end  
   if btnp(1) then next_valid_char(1) end   
-
-  local selected = game.chars[game.selected_index]
+  selected = get_selected_char()
 
   
   if btnp(4) and can_char_move(selected) then 
     game.turn_state = TURN_CHOOSE_STEPS
   end
+end
+
+
+function next_valid_char(dir)
+  local total = #game.chars
+  local current = game.selected_index
+  if current == nil then
+    current = (dir > 0) and 0 or 1
+  end
+
+  for i=1,total do
+    current = ((current - 1 + dir) % total) + 1
+    local c = game.chars[current]
+    if can_char_move(c) then
+      game.selected_index = current
+      return
+    end
+  end
+
+  game.selected_index = nil
+end
+
+function can_char_move(c)
+  
+  if c.caught then return false end
+  
+  if c.is_critter and dice_left("green") <= 0 then return false end
+  if not c.is_critter and dice_left("black") <= 0 then return false end
+  return true
 end
 
 function update_choose_steps()
@@ -148,15 +189,20 @@ function get_char(name)
   end
 end
 
+function get_selected_char()
+  if game.selected_index == nil then return nil end
+  return game.chars[game.selected_index]
+end
+
 function reset_max_position()
   local max = get_char("max")
-  max.x, max.y = max.start_x, max.start_y
+  max.pos = max.start_pos
 end
 
 function any_critter_caught()
   local max = get_char("max")
   for c in all(game.chars) do
-    if c.is_critter and not c.caught and c.x == max.x and c.y == max.y then
+    if c.is_critter and not c.caught and c.pos == max.pos then
       return true
     end
   end
@@ -166,29 +212,12 @@ end
 function remove_caught_critters()
   local max = get_char("max")
   for c in all(game.chars) do
-    if c.is_critter and not c.caught and c.x == max.x and c.y == max.y then
+    if c.is_critter and not c.caught and c.pos == max.pos then
       c.caught = true
     end
   end
 end
 
-function next_valid_char(dir)
-  local total = #game.chars
-  for i=1,total do
-    game.selected_index = ((game.selected_index - 1 + dir) % total) + 1
-    local c = game.chars[game.selected_index]
-    if can_char_move(c) then return end
-  end
-end
-
-function can_char_move(c)
-  
-  if c.caught then return false end
-  
-  if c.is_critter and dice_left("green") <= 0 then return false end
-  if not c.is_critter and dice_left("black") <= 0 then return false end
-  return true
-end
 
 function dice_left(color)
   local count = 0
@@ -223,7 +252,7 @@ function draw_game()
   end
 
   
-  local selected = game.chars[game.selected_index]
+  local selected = get_selected_char()
   if selected ~= nil then
     local cell = board[selected.pos]
     rect(cell.x, cell.y, cell.x+7, cell.y+7, 7)

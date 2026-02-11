@@ -13,6 +13,12 @@ end
 
 
 function update_move_char()
+  local selected = get_selected_char()
+  if selected == nil then
+    game.turn_state = TURN_END
+    return
+  end
+
   move_character(game.selected_index, steps_to_move)
   game.turn_state = TURN_CHECK_CAPTURE
 end
