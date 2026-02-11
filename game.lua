@@ -115,6 +115,7 @@ function update_select_char()
 
   -- choose character if it can move
   if btnp(4) and can_char_move(selected) then -- ❎
+    steps_to_move = 1
     game.turn_state = TURN_CHOOSE_STEPS
   end
 end
@@ -149,21 +150,54 @@ function can_char_move(c)
 end
 
 function update_choose_steps()
-  -- TO BE IMPLEMENTED IF MULTI-STEP MOVEMENT IS ALLOWED
-  steps_to_move = 1 -- for now, just move 1 step
-  game.turn_state = TURN_MOVE_CHAR
+  local selected = get_selected_char()
+  if selected == nil then
+    game.turn_state = TURN_SELECT_CHAR
+    return
+  end
+
+  local die_color = selected.is_critter and "green" or "black"
+  local max_steps = min(2, dice_left(die_color))
+
+  if max_steps <= 0 then
+    game.turn_state = TURN_SELECT_CHAR
+    return
+  end
+
+  if steps_to_move < 1 then steps_to_move = 1 end
+  if steps_to_move > max_steps then steps_to_move = max_steps end
+
+  -- toggle between 1 and 2 only when both are available
+  if max_steps >= 2 and (btnp(0) or btnp(1)) then
+    if steps_to_move == 1 then
+      steps_to_move = 2
+    else
+      steps_to_move = 1
+    end
+  end
+
+  if btnp(5) then -- 🅾️ back
+    game.turn_state = TURN_SELECT_CHAR
+    return
+  end
+
+  if btnp(4) then -- ❎ confirm
+    game.turn_state = TURN_MOVE_CHAR
+  end
 end
 
 function move_character(index, steps)
   local c = game.chars[index]
-  printh("moving "..c.name.." by "..steps.." steps")
-  c.pos += steps
+  local die_color = c.is_critter and "green" or "black"
+  local move_steps = min(steps, dice_left(die_color))
+  if move_steps <= 0 then return end
 
-  -- spend one matching die when this character moves
-  if c.is_critter then
-    spend_die("green")
-  else
-    spend_die("black")
+  printh("moving "..c.name.." by "..move_steps.." steps")
+  c.pos += move_steps
+
+  -- spend one matching die per step moved
+  for i=1,move_steps do
+    spend_die(die_color)
   end
 end
 
@@ -306,5 +340,16 @@ function draw_game()
   local selected_char = get_selected_char()
   if selected_char then
       print("selected: "..selected_char.name, 2, 28, 7)
+  end
+
+  -- display steps to move if in the choose steps state
+  if game.turn_state == TURN_CHOOSE_STEPS and selected_char then
+      local die_color = selected_char.is_critter and "green" or "black"
+      local max_steps = min(2, dice_left(die_color))
+      if max_steps >= 2 then
+          print("steps: "..steps_to_move.." (l/r, x)", 2, 36, 7)
+      else
+          print("steps: 1", 2, 36, 7)
+      end
   end
 end
