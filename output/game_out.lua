@@ -158,6 +158,13 @@ function move_character(index, steps)
   local c = game.chars[index]
   printh("moving "..c.name.." by "..steps.." steps")
   c.pos += steps
+
+  
+  if c.is_critter then
+    spend_die("green")
+  else
+    spend_die("black")
+  end
 end
 
 function update_check_capture()
@@ -165,7 +172,11 @@ function update_check_capture()
     remove_caught_critters()
   end
 
-  game.turn_state = TURN_END
+  if dice_left("") > 0 then
+    game.turn_state = TURN_SELECT_CHAR
+  else
+    game.turn_state = TURN_END
+  end
 end
 
 function update_turn_end()  
@@ -227,6 +238,16 @@ function dice_left(color)
   return count
 end
 
+function spend_die(color)
+  for d in all(game.dice) do
+    if d.result == color then
+      d.result = nil
+      return true
+    end
+  end
+  return false
+end
+
 
 function draw_game()
   cls()
@@ -281,4 +302,9 @@ function draw_game()
   }
   print("turn state: "..(turn_states[game.turn_state] or "unknown"), 2, 18, 7)
 
+  
+  local selected_char = get_selected_char()
+  if selected_char then
+      print("selected: "..selected_char.name, 2, 28, 7)
+  end
 end
