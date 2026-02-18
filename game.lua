@@ -275,9 +275,18 @@ end
 function draw_game()
   cls()
   -- draw board tiles
-  for i=1,BOARD_SIZE do
+  for i=1,#board do
       local tile_col = (i % 2 == 0) and 5 or 6
       rectfill(board[i].x, board[i].y, board[i].x+7, board[i].y+7, tile_col)
+  end
+  if critter_end_tiles then
+    local lane_col = {mouse=11, bird=12, squirrel=3}
+    for name, tiles in pairs(critter_end_tiles) do
+      local col = lane_col[name] or 13
+      for tile in all(tiles) do
+        rectfill(tile.x, tile.y, tile.x+7, tile.y+7, col)
+      end
+    end
   end
 
   local selected = get_selected_char()
