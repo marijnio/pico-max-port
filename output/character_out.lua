@@ -20,5 +20,5 @@ function update_move_char()
   end
 
   move_character(game.selected_index, steps_to_move)
-  game.turn_state = TURN_CHECK_CAPTURE
+  game.turn_state = TURN_RESOLVE_CAPTURE
 end

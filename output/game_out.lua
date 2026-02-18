@@ -5,7 +5,7 @@ TURN_ROLL_DICE = 2
 TURN_SELECT_CHAR = 3
 TURN_CHOOSE_STEPS = 4
 TURN_MOVE_CHAR = 5
-TURN_CHECK_CAPTURE = 6
+TURN_RESOLVE_CAPTURE = 6
 TURN_END = 7
 
 game = {
@@ -29,8 +29,8 @@ function init_game()
   max_position = 0
   add(game.chars, make_char("max", 1, false))
   add(game.chars, make_char("mouse", 4, true))
-  
-  
+  add(game.chars, make_char("bird", 4, true))
+  add(game.chars, make_char("squirrel", 4, true))
   init_board()
   printh("game initialized")
   
@@ -50,8 +50,8 @@ function update_game()
     update_choose_steps()
   elseif game.turn_state == TURN_MOVE_CHAR then
     update_move_char()
-  elseif game.turn_state == TURN_CHECK_CAPTURE then
-    update_check_capture()
+  elseif game.turn_state == TURN_RESOLVE_CAPTURE then
+    update_resolve_capture()
   elseif game.turn_state == TURN_END then
     update_turn_end()
   end
@@ -201,10 +201,8 @@ function move_character(index, steps)
   end
 end
 
-function update_check_capture()
-  if any_critter_caught() then
-    remove_caught_critters()
-  end
+function update_resolve_capture()
+  remove_caught_critters()
 
   if dice_left("") > 0 then
     game.turn_state = TURN_SELECT_CHAR
@@ -244,21 +242,12 @@ function reset_max_position()
   max.pos = max.start_pos
 end
 
-function any_critter_caught()
-  local max = get_char("max")
-  for c in all(game.chars) do
-    if c.is_critter and not c.caught and c.pos == max.pos then
-      return true
-    end
-  end
-  return false
-end
-
 function remove_caught_critters()
   local max = get_char("max")
   for c in all(game.chars) do
     if c.is_critter and not c.caught and c.pos == max.pos then
       c.caught = true
+      printh(c.name.." got caught!")
     end
   end
 end
@@ -287,32 +276,56 @@ function draw_game()
   cls()
   
   for i=1,BOARD_SIZE do
-      rectfill(board[i].x, board[i].y, board[i].x+7, board[i].y+7, 5)
+      local tile_col = (i % 2 == 0) and 5 or 6
+      rectfill(board[i].x, board[i].y, board[i].x+7, board[i].y+7, tile_col)
   end
 
-  
-  
-  for i, c in ipairs(game.chars) do
-    if c.pos ~= nil and board[c.pos] then
-      
-      local cell = board[c.pos]
-      
-      
-      local col = c.can_move and 11 or 8
+  local selected = get_selected_char()
+  local slot_offsets = {
+    {1, 1}, 
+    {4, 1}, 
+    {1, 4}, 
+    {4, 4}  
+  }
+  local chars_by_pos = {}
 
-      
-      rectfill(cell.x+1, cell.y+1, cell.x+6, cell.y+6, col)
-      
+  
+  for c in all(game.chars) do
+    if c.pos ~= nil and board[c.pos] then
+      if chars_by_pos[c.pos] == nil then
+        chars_by_pos[c.pos] = {}
+      end
+      add(chars_by_pos[c.pos], c)
     end
   end
 
   
-  local selected = get_selected_char()
-  if selected ~= nil then
-    local cell = board[selected.pos]
-    rect(cell.x, cell.y, cell.x+7, cell.y+7, 7)
+  for pos, chars_on_tile in pairs(chars_by_pos) do
+    local cell = board[pos]
+    for i=1,min(#chars_on_tile, 4) do
+      local c = chars_on_tile[i]
+      local offset = slot_offsets[i]
+      local px = cell.x + offset[1]
+      local py = cell.y + offset[2]
+
+      
+      local col = c.caught and 2 or (c.can_move and 11 or 8)
+
+      
+      rectfill(px, py, px+2, py+2, col)
+
+      
+      if c.caught then
+        pset(px+1, py+1, 7)
+      end
+
+      
+      if c == selected then
+        rect(px-1, py-1, px+3, py+3, 7)
+      end
+    end
   end
-  
+
   
   if game.dice then
       local dice_text = "dice: "
@@ -331,7 +344,7 @@ function draw_game()
       [TURN_SELECT_CHAR] = "select character",
       [TURN_CHOOSE_STEPS] = "choose steps",
       [TURN_MOVE_CHAR] = "move character",
-      [TURN_CHECK_CAPTURE] = "check caught",
+      [TURN_RESOLVE_CAPTURE] = "check caught",
       [TURN_END] = "turn end"
   }
   print("turn state: "..(turn_states[game.turn_state] or "unknown"), 2, 18, 7)
